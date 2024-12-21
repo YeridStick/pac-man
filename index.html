@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pac-Man Mejorado</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #000;
+            font-family: 'Press Start 2P', Arial, sans-serif;
+        }
+
+        #gameContainer {
+            position: relative;
+            padding: 20px;
+            background: linear-gradient(45deg, #1a1a1a, #000);
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 255, 0.3);
+        }
+
+        #gameBoard {
+            position: relative;
+            width: 420px;
+            height: 420px;
+            background: #000;
+            border: 3px solid #00f;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .wall {
+            position: absolute;
+            background: linear-gradient(45deg, #00f, #0077ff);
+            border-radius: 3px;
+            box-shadow: 0 0 5px #00f;
+        }
+
+        .dot {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #fff;
+            border-radius: 50%;
+            margin: 12px;
+            box-shadow: 0 0 3px #fff;
+        }
+
+        .powerPellet {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            margin: 9px;
+            box-shadow: 0 0 8px #fff;
+            animation: blink 0.6s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        #pacman {
+            transition: transform 0.1s ease-in-out, left 0.1s linear, top 0.1s linear;
+            transform-origin: center;
+        }
+
+
+        @keyframes chomp {
+            0% {
+                transform: rotate(0deg);
+            }
+            50% {
+                transform: rotate(-30deg);
+            }
+            100% {
+                transform: rotate(0deg);
+            }
+        }
+
+        @keyframes chomp {
+            0% {
+                clip-path: polygon(100% 0, 100% 100%, 50% 50%); 
+            }
+            50% {
+                clip-path: polygon(100% 25%, 100% 75%, 50% 50%); 
+            }
+            100% {
+                clip-path: polygon(100% 0, 100% 100%, 50% 50%); 
+            }
+        }
+
+        .ghost {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 15px 15px 0 0;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .ghost::before {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            width: 30px;
+            height: 5px;
+            background: inherit;
+            clip-path: polygon(0% 0%, 25% 100%, 50% 0%, 75% 100%, 100% 0%);
+        }
+
+        .ghost::after {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 5px;
+            width: 20px;
+            height: 8px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .ghost-eyes {
+            position: absolute;
+            top: 8px;
+            width: 4px;
+            height: 4px;
+            background: #000;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+
+        .ghost-eyes.left { left: 8px; }
+        .ghost-eyes.right { right: 8px; }
+
+        #score {
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 20px;
+            text-shadow: 0 0 5px #00f;
+        }
+
+        #gameOver, #startScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #00f;
+            width: 80%;
+            box-shadow: 0 0 20px rgba(0, 0, 255, 0.5);
+        }
+
+        #gameOver {
+            display: none;
+            z-index: 10;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #00f;
+            width: 80%;
+            box-shadow: 0 0 20px rgba(0, 0, 255, 0.5);
+        }
+
+
+        #gameOver { display: none; }
+
+        button {
+            margin-top: 20px;
+            padding: 15px 30px;
+            font-size: 18px;
+            background: linear-gradient(45deg, #00f, #0077ff);
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            font-family: 'Press Start 2P', Arial, sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 0 10px rgba(0, 0, 255, 0.5);
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(0, 0, 255, 0.7);
+        }
+
+        .lives {
+            position: absolute;
+            top: -40px;
+            right: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .life {
+            width: 20px;
+            height: 20px;
+            background: yellow;
+            border-radius: 50%;
+            clip-path: polygon(100% 0, 100% 100%, 50% 50%);
+        }
+
+        .level {
+            position: absolute;
+            top: -40px;
+            left: 10px;
+            color: white;
+            font-size: 16px;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="gameBoard">
+            <div class="level">Level: 1</div>
+            <div id="score">Score: 0</div>
+            <div class="lives"></div>
+            <svg id="pacman" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="30" height="30" style="position:absolute;">
+                <circle cx="50" cy="50" r="50" fill="yellow" />
+                <polygon points="50,50 100,25 100,75" fill="black" />
+            </svg>
+            
+            <div id="startScreen">
+                <h1>PAC-MAN</h1>
+                <button id="startButton">Start Game</button>
+                <p style="margin-top: 20px">Use arrow keys to move</p>
+            </div>
+            <div id="gameOver">
+                <h2>Game Over</h2>
+                <p id="finalScore"></p>
+                <button id="restartButton">Play Again</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Elementos del DOM y constantes previas...
+        const gameBoard = document.getElementById('gameBoard');
+        const pacman = document.getElementById('pacman');
+        const scoreDisplay = document.getElementById('score');
+        const gameOverScreen = document.getElementById('gameOver');
+        const startScreen = document.getElementById('startScreen');
+        const startButton = document.getElementById('startButton');
+        const restartButton = document.getElementById('restartButton');
+        const livesContainer = document.querySelector('.lives');
+        const levelDisplay = document.querySelector('.level');
+
+        const CELL_SIZE = 30;
+        const GRID_WIDTH = 14;
+        const GRID_HEIGHT = 14;
+        const GHOST_SPEED = 200; // Velocidad base de los fantasmas
+
+        const gameMap = [
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 3, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 3, 1],
+            [1, 2, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 2, 1],
+            [1, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 1],
+            [1, 2, 1, 2, 1, 1, 2, 1, 1, 2, 2, 1, 2, 1],
+            [1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1],
+            [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 1, 2, 1],
+            [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 1, 2, 1],
+            [1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1],
+            [1, 2, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 2, 1],
+            [1, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1],
+            [1, 2, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 2, 1],
+            [1, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        ];
+
+        
+        // Nuevas variables del juego
+        let lives = 3;
+        let level = 1;
+        let pacmanPos = { x: 6, y: 8 };
+        let pacmanDir = { x: 0, y: 0 };
+        let score = 0;
+        let gameInterval;
+        let ghostIntervals = [];
+        let ghosts = [];
+        let dots = [];
+        let powerPellets = [];
+        let isPowerMode = false;
+        let powerModeTimeout;
+        let mouthOpen = true;
+
+        // Función para actualizar las vidas
+        function updateLives() {
+            livesContainer.innerHTML = '';
+            for (let i = 0; i < lives; i++) {
+                const life = document.createElement('div');
+                life.className = 'life';
+                livesContainer.appendChild(life);
+            }
+        }
+
+        // Mejora en la creación de fantasmas
+        function createGhosts() {
+            const ghostColors = ['#ff0000', '#ffb8ff', '#00ffff', '#ffb852'];
+            const ghostPositions = [
+                { x: 1, y: 1 },
+                { x: 12, y: 1 },
+                { x: 1, y: 12 },
+                { x: 12, y: 12 }
+            ];
+
+            ghosts = ghostPositions.map((pos, index) => {
+                const ghost = document.createElement('div');
+                ghost.className = 'ghost';
+                ghost.style.backgroundColor = ghostColors[index];
+                
+                // Añadir ojos
+                const leftEye = document.createElement('div');
+                leftEye.className = 'ghost-eyes left';
+                const rightEye = document.createElement('div');
+                rightEye.className = 'ghost-eyes right';
+                
+                ghost.appendChild(leftEye);
+                ghost.appendChild(rightEye);
+                
+                ghost.style.left = pos.x * CELL_SIZE + 'px';
+                ghost.style.top = pos.y * CELL_SIZE + 'px';
+                gameBoard.appendChild(ghost);
+
+                return {
+                    element: ghost,
+                    pos: { ...pos },
+                    dir: { x: 0, y: 0 },
+                    color: ghostColors[index],
+                    personality: index, // Cada fantasma tiene su propia personalidad
+                    mode: 'scatter', // Modo inicial: scatter
+                    target: { x: 0, y: 0 },
+                    baseSpeed: GHOST_SPEED - (index * 10) // Velocidades ligeramente diferentes
+                };
+            });
+        }
+
+        // Nueva función para el movimiento inteligente de fantasmas
+        function moveGhost(ghost) {
+            // Actualizar el objetivo según la personalidad y modo
+            updateGhostTarget(ghost);
+            
+            // Calcular la mejor dirección hacia el objetivo
+            const possibleDirs = [
+                { x: 0, y: -1 },
+                { x: 0, y: 1 },
+                { x: -1, y: 0 },
+                { x: 1, y: 0 }
+            ];
+
+            let bestDir = { x: 0, y: 0 };
+            let minDistance = Infinity;
+
+            possibleDirs.forEach(dir => {
+                const newX = ghost.pos.x + dir.x;
+                const newY = ghost.pos.y + dir.y;
+                
+                // Verificar si la dirección es válida
+                if (gameMap[newY][newX] !== 1) {
+                    // Calcular distancia al objetivo
+                    const distance = Math.sqrt(
+                        Math.pow(newX - ghost.target.x, 2) + 
+                        Math.pow(newY - ghost.target.y, 2)
+                    );
+                    
+                    // Añadir algo de aleatoriedad para que el movimiento sea menos predecible
+                    const randomFactor = Math.random() * 0.2;
+                    
+                    if (distance + randomFactor < minDistance) {
+                        minDistance = distance + randomFactor;
+                        bestDir = dir;
+                    }
+                }
+            });
+
+            // Mover el fantasma
+            ghost.pos.x += bestDir.x;
+            ghost.pos.y += bestDir.y;
+            
+            // Actualizar posición visual
+            ghost.element.style.left = ghost.pos.x * CELL_SIZE + 'px';
+            ghost.element.style.top = ghost.pos.y * CELL_SIZE + 'px';
+
+            // Actualizar dirección de los ojos
+            updateGhostEyes(ghost, bestDir);
+        }
+
+        function updateGhostTarget(ghost) {
+            switch(ghost.personality) {
+                case 0: // Rojo - persigue directamente a Pac-Man
+                    ghost.target = { ...pacmanPos };
+                    break;
+                case 1: // Rosa - intenta interceptar a Pac-Man
+                    ghost.target = {
+                        x: pacmanPos.x + (pacmanDir.x * 4),
+                        y: pacmanPos.y + (pacmanDir.y * 4)
+                    };
+                    break;
+                case 2: // Cyan - movimiento más errático
+                    if (Math.random() < 0.3) {
+                        ghost.target = {
+                            x: Math.floor(Math.random() * GRID_WIDTH),
+                            y: Math.floor(Math.random() * GRID_HEIGHT)
+                        };
+                    } else {
+                        ghost.target = { ...pacmanPos };
+                    }
+                    break;
+                case 3: // Naranja - alterna entre perseguir y alejarse
+                    const distToPacman = Math.sqrt(
+                        Math.pow(ghost.pos.x - pacmanPos.x, 2) + 
+                        Math.pow(ghost.pos.y - pacmanPos.y, 2)
+                    );
+                    if (distToPacman < 8) {
+                        ghost.target = { x: 0, y: 0 }; // Huir a una esquina
+                    } else {
+                        ghost.target = { ...pacmanPos };
+                    }
+                    break;
+            }
+        }
+
+        function updateGhostEyes(ghost, dir) {
+            const leftEye = ghost.element.querySelector('.ghost-eyes.left');
+            const rightEye = ghost.element.querySelector('.ghost-eyes.right');
+            
+            // Ajustar posición de los ojos según la dirección
+            if (dir.x > 0) {
+                leftEye.style.transform = 'translateX(2px)';
+                rightEye.style.transform = 'translateX(2px)';
+            } else if (dir.x < 0) {
+                leftEye.style.transform = 'translateX(-2px)';
+                rightEye.style.transform = 'translateX(-2px)';
+            } else if (dir.y < 0) {
+                leftEye.style.transform = 'translateY(-2px)';
+                rightEye.style.transform = 'translateY(-2px)';
+            } else if (dir.y > 0) {
+                leftEye.style.transform = 'translateY(2px)';
+                rightEye.style.transform = 'translateY(2px)';
+            }
+        }
+
+        function activatePowerMode() {
+            isPowerMode = true;
+            ghosts.forEach(ghost => {
+                ghost.element.style.background = '#2121ff'; // Azul para el modo de poder
+                ghost.element.style.transition = 'background-color 0.3s';
+            });
+
+            // Desactiva el modo de poder después de 10 segundos
+            clearTimeout(powerModeTimeout);
+            powerModeTimeout = setTimeout(() => {
+                isPowerMode = false;
+                ghosts.forEach(ghost => {
+                    ghost.element.style.background = ghost.color; // Vuelve a su color original
+                });
+            }, 10000);
+        }
+
+        function createMaze() {
+            // Limpiar el tablero
+            document.querySelectorAll('.wall, .dot, .powerPellet, .ghost').forEach(el => el.remove());
+            dots = [];
+            powerPellets = [];
+
+            // Crear el laberinto
+            for (let y = 0; y < GRID_HEIGHT; y++) {
+                for (let x = 0; x < GRID_WIDTH; x++) {
+                    const cell = gameMap[y][x];
+                    if (cell === 1) {
+                        const wall = document.createElement('div');
+                        wall.className = 'wall';
+                        wall.style.width = CELL_SIZE + 'px';
+                        wall.style.height = CELL_SIZE + 'px';
+                        wall.style.left = x * CELL_SIZE + 'px';
+                        wall.style.top = y * CELL_SIZE + 'px';
+                        gameBoard.appendChild(wall);
+                    } else if (cell === 2) {
+                        const dot = document.createElement('div');
+                        dot.className = 'dot';
+                        dot.style.left = x * CELL_SIZE + 'px';
+                        dot.style.top = y * CELL_SIZE + 'px';
+                        gameBoard.appendChild(dot);
+                        dots.push({ x, y, element: dot });
+                    } else if (cell === 3) {
+                        const powerPellet = document.createElement('div');
+                        powerPellet.className = 'powerPellet';
+                        powerPellet.style.left = x * CELL_SIZE + 'px';
+                        powerPellet.style.top = y * CELL_SIZE + 'px';
+                        gameBoard.appendChild(powerPellet);
+                        powerPellets.push({ x, y, element: powerPellet });
+                    }
+                }
+            }
+        }
+
+
+        function checkCollisions() {
+            // Colisión con dots
+            dots.forEach((dot, index) => {
+                if (dot.x === pacmanPos.x && dot.y === pacmanPos.y) {
+                    dot.element.remove();
+                    dots.splice(index, 1);
+                    score += 10;
+                    scoreDisplay.textContent = 'Score: ' + score;
+                }
+            });
+
+            // Colisión con power pellets
+            powerPellets.forEach((pellet, index) => {
+                if (pellet.x === pacmanPos.x && pellet.y === pacmanPos.y) {
+                    pellet.element.remove();
+                    powerPellets.splice(index, 1);
+                    activatePowerMode();
+                    score += 50;
+                    scoreDisplay.textContent = 'Score: ' + score;
+                }
+            });
+
+            // Verificar victoria
+            if (dots.length === 0 && powerPellets.length === 0) {
+                levelUp();
+            }
+        }
+
+        function levelUp() {
+            level++;
+            levelDisplay.textContent = 'Level: ' + level;
+            
+            // Aumentar la dificultad
+            ghosts.forEach(ghost => {
+                ghost.baseSpeed = Math.max(ghost.baseSpeed - 20, 100); // Aumentar velocidad con límite
+            });
+
+            // Reiniciar el nivel
+            clearIntervals();
+            createMaze();
+            resetPositions();
+            startGhostMovements();
+        }
+
+        function resetPositions() {
+            // Resetear posición de Pac-Man
+            pacmanPos = { x: 6, y: 8 };
+            pacmanDir = { x: 0, y: 0 };
+            updatePacmanPosition();
+
+            // Resetear posiciones de fantasmas
+            const ghostInitialPos = [
+                { x: 1, y: 1 },
+                { x: 12, y: 1 },
+                { x: 1, y: 12 },
+                { x: 12, y: 12 }
+            ];
+
+            ghosts.forEach((ghost, index) => {
+                ghost.pos = { ...ghostInitialPos[index] };
+                ghost.element.style.left = ghost.pos.x * CELL_SIZE + 'px';
+                ghost.element.style.top = ghost.pos.y * CELL_SIZE + 'px';
+            });
+        }
+
+        function clearIntervals() {
+            clearInterval(gameInterval);
+            ghostIntervals.forEach(interval => clearInterval(interval));
+            ghostIntervals = [];
+        }
+
+        function handleGhostCollision(ghost) {
+            if (isPowerMode) {
+                // Fantasma vuelve a su posición inicial
+                const initialPositions = [
+                    { x: 1, y: 1 },
+                    { x: 12, y: 1 },
+                    { x: 1, y: 12 },
+                    { x: 12, y: 12 }
+                ];
+                const index = ghosts.indexOf(ghost);
+                ghost.pos = { ...initialPositions[index] };
+                ghost.element.style.left = ghost.pos.x * CELL_SIZE + 'px';
+                ghost.element.style.top = ghost.pos.y * CELL_SIZE + 'px';
+
+                // Otorgar puntos por comer al fantasma
+                score += 200;
+                scoreDisplay.textContent = 'Score: ' + score;
+
+                return true; // Colisión resuelta
+            } else {
+                // Reducir vidas si no está en modo de poder
+                lives--;
+                updateLives();
+
+                if (lives <= 0) {
+                    gameOver();
+                    return false; // Fin del juego
+                }
+
+                resetPositions();
+                return true; // Colisión resuelta
+            }
+        }
+
+        function startGhostMovements() {
+            ghosts.forEach(ghost => {
+                const interval = setInterval(() => moveGhost(ghost), ghost.baseSpeed);
+                ghostIntervals.push(interval);
+            });
+        }
+
+        function gameLoop() {
+            // Actualizar posición de Pac-Man
+            const nextX = pacmanPos.x + pacmanDir.x;
+            const nextY = pacmanPos.y + pacmanDir.y;
+
+            if (gameMap[nextY][nextX] !== 1) {
+                pacmanPos.x = nextX;
+                pacmanPos.y = nextY;
+                updatePacmanPosition();
+            }
+
+            // Verificar colisiones con fantasmas
+            ghosts.forEach(ghost => {
+                if (ghost.pos.x === pacmanPos.x && ghost.pos.y === pacmanPos.y) {
+                    handleGhostCollision(ghost);
+                }
+            });
+
+            checkCollisions();
+        }
+
+
+        function updatePacmanPosition() {
+            pacman.style.left = pacmanPos.x * CELL_SIZE + 'px';
+            pacman.style.top = pacmanPos.y * CELL_SIZE + 'px';
+
+            // Rotación según la dirección
+            let rotation = 0;
+            if (pacmanDir.x === 1) rotation = 0;
+            else if (pacmanDir.x === -1) rotation = 180;
+            else if (pacmanDir.y === -1) rotation = 270;
+            else if (pacmanDir.y === 1) rotation = 90;
+
+            pacman.style.transform = `rotate(${rotation}deg)`;
+        }
+
+        function gameOver() {
+            clearIntervals();
+            gameOverScreen.style.display = 'flex';
+            const finalScore = document.getElementById('finalScore');
+            finalScore.textContent = `Final Score: ${score}`;
+        }
+
+        function startGame() {
+            // Reiniciar variables
+            lives = 3;
+            level = 1;
+            score = 0;
+            pacmanPos = { x: 6, y: 8 };
+            pacmanDir = { x: 0, y: 0 };
+            scoreDisplay.textContent = 'Score: 0';
+            levelDisplay.textContent = 'Level: 1';
+            isPowerMode = false;
+            clearTimeout(powerModeTimeout);
+
+            // Actualizar vidas
+            updateLives();
+
+            // Limpiar y crear elementos
+            createMaze();
+            createGhosts();
+            resetPositions();
+
+            // Ocultar pantallas
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+
+            // Iniciar el juego
+            clearIntervals();
+            gameInterval = setInterval(gameLoop, 100);
+            startGhostMovements();
+        }
+
+        // Controles del juego
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowLeft':
+                    pacmanDir = { x: -1, y: 0 };
+                    break;
+                case 'ArrowRight':
+                    pacmanDir = { x: 1, y: 0 };
+                    break;
+                case 'ArrowUp':
+                    pacmanDir = { x: 0, y: -1 };
+                    break;
+                case 'ArrowDown':
+                    pacmanDir = { x: 0, y: 1 };
+                    break;
+            }
+        });
+
+        function animatePacmanMouth() {
+            const mouth = document.getElementById('pacman-mouth');
+            if (mouthOpen) {
+                mouth.setAttribute('points', '50,50 100,40 100,60'); // Boca semi cerrada
+            } else {
+                mouth.setAttribute('points', '50,50 100,25 100,75'); // Boca abierta
+            }
+            mouthOpen = !mouthOpen;
+        }
+
+        // Configura la animación de la boca
+        setInterval(animatePacmanMouth, 200);
+
+        // Event listeners para los botones
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', startGame);
+    </script>
+</body>
+</html>
